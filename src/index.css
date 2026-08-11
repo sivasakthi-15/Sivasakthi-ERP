@@ -1,0 +1,292 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=Space+Grotesk:wght@400;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Space Grotesk", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+/* Base custom micro-animations */
+@keyframes slide-in {
+  from {
+    transform: translateY(12px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes scale-up {
+  from {
+    transform: scale(0.97);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-slide-in {
+  animation: slide-in 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-scale-up {
+  animation: scale-up 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Spin slow animation for settings spinner */
+.animate-spin-slow {
+  animation: spin 8s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ==========================================
+   PRINTER OPTIMIZATION MEDIA RULES
+============================================= */
+@media print {
+  /* Force page size to standard A4 and remove browser body margins */
+  /* @page rules moved to inline styles in BillPreview.tsx */
+
+  html, body {
+    width: 100% !important;
+    min-height: 297mm !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: white !important;
+    color: #000 !important;
+    overflow: visible !important;
+  }
+
+  /* Hide all interactive components outside the print target */
+  body {
+    margin:0;
+    padding:0;
+  }
+  /* Isolate our specified print container targets */
+  #a4-print-element,
+  #a4-print-element *,
+  #thermal-print-element,
+  #thermal-print-element * {
+    visibility: visible !important;
+  }
+
+  #a4-print-element {
+    display: block !important;
+    flex-direction: column !important;
+    width: 210mm !important;
+    margin: 0 auto !important;
+    gap: 0 !important;
+    justify-content: flex-start !important;
+    align-items: stretch !important;
+    position: relative !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 210mm !important;
+    min-height: 297mm !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    box-sizing: border-box !important;
+  }
+
+  .print-page {
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    width: 210mm !important;
+    height: max-content !important;
+    min-height: 290mm !important;
+    margin: 0 auto !important;
+    padding: 3mm 6mm 6mm 6mm !important;
+    box-sizing: border-box !important;
+    break-after: auto !important;
+    break-inside: auto !important;
+    page-break-after: auto !important;
+    page-break-inside: auto !important;
+    position: relative !important;
+    background: white !important;
+    overflow: visible !important;
+    top: auto !important;
+    left: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+  }
+
+  .print-page:last-child {
+    break-after: auto !important;
+    page-break-after: auto !important;
+  }
+
+  .print-single-page {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  .print-page-measure {
+    visibility: hidden !important;
+    position: absolute !important;
+    pointer-events: none !important;
+    left: 0 !important;
+    top: 0 !important;
+  }
+
+  /* Fixed header — never shrinks */
+  .print-page-header,
+  .print-page > .flex-1 > .z-10 {
+    display: block !important;
+    flex: 0 0 auto !important;
+    flex-shrink: 0 !important;
+    break-inside: auto !important;
+    page-break-inside: auto !important;
+  }
+
+  /* Dynamic product area — allow normal page flow in print */
+  .print-page > .flex-1 {
+    display: flex !important;
+    flex-direction: column !important;
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+
+  .print-page-products {
+      display: block !important;
+      flex: none !important;
+      min-height: 0 !important;
+      overflow: visible !important;
+    }
+
+  /* Footer pinned to bottom — never overlaps products */
+  .print-invoice-footer {
+    flex: 0 0 auto !important;
+    flex-shrink: 0 !important;
+    break-inside: auto !important;
+    page-break-inside: auto !important;
+  }
+
+  .print-page-number-bar {
+    flex: 0 0 auto !important;
+    flex-shrink: 0 !important;
+    break-inside: auto !important;
+    page-break-inside: auto !important;
+  }
+
+  .print-page table {
+    break-inside: auto !important;
+    width: 100% !important;
+  }
+
+  .print-page thead {
+    display: table-header-group !important;
+  }
+
+  .print-page tbody tr {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  .print-page .print-page-number {
+    font-size: 9px !important;
+  }
+
+  .empty-product-row td {
+    height: inherit !important;
+  }
+
+  #thermal-print-element {
+    display: block !important;
+    justify-content: flex-start !important;
+    align-items: stretch !important;
+    position: relative !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 80mm !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 auto !important;
+    box-sizing: border-box !important;
+    transform: none !important;
+    height: auto !important;
+  }
+
+  .print-no-scale {
+    transform: none !important;
+    width: auto !important;
+    min-width: 0 !important;
+  }
+
+  /* Force display backgrounds in chrome printing */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  body.printing > *{
+    display:none !important;
+  }
+
+  body.printing #a4-print-element{
+    display:block !important;
+  }
+}
+
+/* Screen + measurement mode: mirror A4 print dimensions for pagination engine */
+.a4-print-measure-mode .print-page,
+
+
+.a4-print-measure-mode .print-page > .flex-1 {
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow: visible !important;
+}
+
+.a4-print-measure-mode .print-page-measure {
+    overflow: visible !important;
+}
+
+.a4-print-measure-mode .print-page-measure .print-page-content,
+.a4-print-measure-mode .print-page-measure .flex-1 {
+    overflow: visible !important;
+}
+
+.a4-print-measure-mode .print-page-measure {
+      display: flex !important;
+      flex-direction: column !important;
+      width: 210mm !important;
+      height: 297mm !important;
+      max-height: 297mm !important;
+      min-height: 297mm !important;
+      padding: 4mm !important;
+      box-sizing: border-box !important;
+      overflow: hidden !important;
+      visibility: hidden !important;
+      position: absolute !important;
+      pointer-events: none !important;
+      left: -9999px !important;
+      top: -9999px !important;
+    }
+
+    .a4-print-measure-mode .print-page-measure .print-page-content,
+    .a4-print-measure-mode .print-page-measure .flex-1 {
+      min-height: 0 !important;
+      overflow: hidden !important;
+      flex: 1 1 0% !important;
+    }
+
+.a4-print-measure-mode .print-page-products { overflow: visible !important; }
