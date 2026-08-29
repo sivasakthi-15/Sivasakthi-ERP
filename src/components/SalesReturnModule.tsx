@@ -41,7 +41,7 @@ export const SalesReturnModule: React.FC = () => {
   const [historySearchTerm, setHistorySearchTerm] = useState('');
 
   // Print format for return receipt
-  const [printTemplate, setPrintTemplate] = useState<'a4' | 'thermal'>('a4');
+  const [printTemplate, setPrintTemplate] = useState<'a4' | 'thermal' | 'a5'>('a4');
 
   // Return standard reasons
   const STANDARD_REASONS = [
@@ -414,8 +414,7 @@ export const SalesReturnModule: React.FC = () => {
             <title>Thermal Receipt</title>
             ${styles}
             <style>
-              @page { margin: 0; size: 80mm auto; }
-              body { margin: 0; padding: 0; width: 80mm; min-width: 80mm; overflow: visible; font-family: monospace; background: white !important; }
+              body { margin: 0; padding: 0; width: 80mm; min-width: 80mm; min-height: 0 !important; overflow: visible; font-family: monospace; background: white !important; }
               #thermal-print-element { width: 100% !important; margin: 0 !important; max-width: none !important; border: none !important; box-shadow: none !important; padding: 0 !important; }
             </style>
           </head>
@@ -425,6 +424,66 @@ export const SalesReturnModule: React.FC = () => {
       printWindow.document.close();
       printWindow.document.body.appendChild(element.cloneNode(true));
       const print = async () => {
+        await printWindow.document.fonts?.ready;
+        
+        // Measure height dynamically
+        const printElement = printWindow.document.getElementById('thermal-print-element');
+        if (printElement) {
+          const images = Array.from(printElement.getElementsByTagName('img'));
+          await Promise.all(images.map(img => {
+            if (img.complete) return Promise.resolve();
+            return new Promise(resolve => { img.onload = resolve; img.onerror = resolve; });
+          }));
+
+          const pxHeight = printElement.offsetHeight;
+          const mmHeight = Math.ceil((pxHeight * 25.4) / 96) + 1;
+          
+          const dynamicStyle = printWindow.document.createElement('style');
+          dynamicStyle.innerHTML = `@media print { @page { size: 80mm ${mmHeight}mm !important; margin: 0; } }`;
+          printWindow.document.head.appendChild(dynamicStyle);
+        }
+
+        printWindow.focus();
+        printWindow.print();
+        printWindow.close();
+      };
+      if (printWindow.document.readyState === 'complete') { void print(); }
+      else { printWindow.addEventListener('load', () => void print(), { once: true }); }
+    } else if (printTemplate === 'a5') {
+      const element = document.getElementById('a5-print-element');
+      if (!element) { alert('Print content not found.'); return; }
+      const printWindow = window.open('', '_blank', 'width=650,height=900');
+      if (!printWindow) { alert('Unable to open print window.'); return; }
+      const styles = Array.from(document.querySelectorAll('link[rel="stylesheet"], style')).map((s) => s.outerHTML).join('');
+      printWindow.document.write(`
+        <!doctype html>
+        <html>
+          <head>
+            <base href="${window.location.href}" />
+            <title>Return Receipt</title>
+              ${styles}
+              <style>
+                @media print {
+                  @page { size: A5 portrait; margin: 0; }
+                  body { width: 148mm !important; margin: 0 auto; padding: 0; background: white !important; }
+                  #a5-print-element { width: 148mm !important; max-width: 148mm !important; margin: 0 !important; border: none !important; box-shadow: none !important; padding: 0 !important; }
+                  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+                  tr { break-inside: avoid; page-break-inside: avoid; }
+                  thead { display: table-header-group; }
+                }
+              </style>
+            </head>
+          <body></body>
+        </html>
+      `);
+      printWindow.document.close();
+      printWindow.document.body.appendChild(element.cloneNode(true));
+      const print = async () => {
+        const links = Array.from(printWindow.document.querySelectorAll('link[rel="stylesheet"]'));
+        await Promise.all(links.map((link: any) => {
+          if (link.sheet) return Promise.resolve();
+          return new Promise(resolve => { link.onload = resolve; link.onerror = resolve; });
+        }));
         await printWindow.document.fonts?.ready;
         printWindow.focus();
         printWindow.print();
@@ -1342,6 +1401,16 @@ export const SalesReturnModule: React.FC = () => {
                 >
                   80mm Thermal Slip
                 </button>
+                <button
+                  onClick={() => setPrintTemplate('a5')}
+                  className={`px-3 py-1.5 text-xs font-semibold rounded-lg capitalize transition-all duration-150 ${
+                    printTemplate === 'a5'
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'text-gray-500 hover:text-gray-800'
+                  }`}
+                >
+                  A5 Return Receipt
+                </button>
               </div>
               <button
                 onClick={handlePrint}
@@ -1522,6 +1591,144 @@ export const SalesReturnModule: React.FC = () => {
                   </div>
                 </div>
 
+                </div>
+              </div>
+            ) : printTemplate === 'a5' ? (
+              /* A5 RETURN RECEIPT STYLE */
+              <div id="a5-print-element" className="w-[148mm] bg-white text-black font-sans select-none mx-auto print:border-none print:shadow-none box-border" style={{ padding: '6px 8px', fontSize: '10px', lineHeight: '1.3' }}>
+                {/* Header – compact, single-block */}
+                <div style={{ textAlign: 'center', borderBottom: '1.5px solid #111', paddingBottom: '3px', marginBottom: '3px' }}>
+                  <div style={{ fontSize: '14px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.02em', lineHeight: '1.2' }}>
+                    {businessDetails.name || 'SIVASAKTHI ELECTRICALS'}
+                  </div>
+                  {businessDetails.address && (
+                    <div style={{ fontSize: '9px', color: '#444', lineHeight: '1.2' }}>{businessDetails.address}</div>
+                  )}
+                  <div style={{ fontSize: '9px', color: '#444', lineHeight: '1.2' }}>
+                    Ph: {businessDetails.phone}
+                    {businessDetails.gstNumber && <span style={{ marginLeft: '8px', fontWeight: 700 }}>GSTIN: {businessDetails.gstNumber}</span>}
+                  </div>
+                  <div style={{ fontSize: '12px', fontWeight: 900, color: '#000', textTransform: 'uppercase', marginTop: '2px', borderTop: '1px dashed #ccc', paddingTop: '2px' }}>
+                    {viewedReturn.creditNoteNumber ? 'CREDIT NOTE' : 'SALES RETURN RECEIPT'}
+                  </div>
+                </div>
+
+                {/* Return meta + Customer – two columns, zero wasted space */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid #aaa', paddingBottom: '3px', marginBottom: '3px', fontSize: '9px' }}>
+                  <div>
+                    <span style={{ color: '#777', fontWeight: 700, textTransform: 'uppercase', fontSize: '8px' }}>Party: </span>
+                    <span style={{ fontWeight: 800, textTransform: 'uppercase', fontSize: '10px' }}>{viewedReturn.customerName}</span>
+                    {viewedReturn.customerMobile && <div style={{ color: '#555' }}>Mobile: {viewedReturn.customerMobile}</div>}
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div><span style={{ color: '#777' }}>Return No: </span><strong>{viewedReturn.returnNumber}</strong></div>
+                    {viewedReturn.creditNoteNumber && <div><span style={{ color: '#777' }}>CN No: </span><strong>{viewedReturn.creditNoteNumber}</strong></div>}
+                    <div><span style={{ color: '#777' }}>Date: </span><strong>{viewedReturn.date} {viewedReturn.time || ''}</strong></div>
+                    <div><span style={{ color: '#777' }}>Inv: </span><strong>{viewedReturn.originalBillNumber}</strong></div>
+                  </div>
+                </div>
+
+                {/* Returned Items Table */}
+                <div style={{ marginBottom: '3px' }}>
+                  <div style={{ fontWeight: 800, fontSize: '9px', textTransform: 'uppercase', marginBottom: '1px' }}>Returned Items</div>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '9.5px' }}>
+                    <thead>
+                      <tr style={{ borderBottom: '1.5px solid #222', borderTop: '1px solid #222' }}>
+                        <th style={{ width: '22px', padding: '2px 2px', textAlign: 'center', fontWeight: 700, fontSize: '8.5px' }}>No</th>
+                        <th style={{ padding: '2px 3px', textAlign: 'left', fontWeight: 700, fontSize: '8.5px' }}>Product Description</th>
+                        <th style={{ width: '38px', padding: '2px 2px', textAlign: 'center', fontWeight: 700, fontSize: '8.5px' }}>Qty</th>
+                        <th style={{ width: '44px', padding: '2px 2px', textAlign: 'right', fontWeight: 700, fontSize: '8.5px' }}>Rate</th>
+                        <th style={{ width: '50px', padding: '2px 2px', textAlign: 'right', fontWeight: 700, fontSize: '8.5px' }}>Amount</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {viewedReturn.items.map((item, index) => (
+                        <tr key={item.productId} style={{ borderBottom: '0.5px solid #e0e0e0', verticalAlign: 'top' }}>
+                          <td style={{ padding: '2px 2px', textAlign: 'center', color: '#666', fontFamily: 'monospace', fontSize: '8.5px' }}>{index + 1}</td>
+                          <td style={{ padding: '2px 3px', fontWeight: 600, lineHeight: '1.25' }}>
+                            {item.name}
+                            {item.gstPercent > 0 && <span style={{ fontSize: '8px', color: '#aaa', marginLeft: '3px' }}>({item.gstPercent}%)</span>}
+                          </td>
+                          <td style={{ padding: '2px 2px', textAlign: 'center', fontWeight: 700 }}>{item.quantity}<span style={{ fontSize: '8px', fontWeight: 400, color: '#777', marginLeft: '1px' }}>{item.unit || ''}</span></td>
+                          <td style={{ padding: '2px 2px', textAlign: 'right', fontFamily: 'monospace' }}>{(item.rate ?? 0).toFixed(2)}</td>
+                          <td style={{ padding: '2px 2px', textAlign: 'right', fontFamily: 'monospace', fontWeight: 700 }}>{(item.total ?? 0).toFixed(2)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Exchange Items Table */}
+                {viewedReturn.exchangeItems && viewedReturn.exchangeItems.length > 0 && (
+                  <div style={{ marginBottom: '3px' }}>
+                    <div style={{ fontWeight: 800, fontSize: '9px', textTransform: 'uppercase', marginBottom: '1px', borderTop: '1px dashed #ccc', paddingTop: '3px' }}>Replacement Items Issued</div>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '9.5px' }}>
+                      <thead>
+                        <tr style={{ borderBottom: '1.5px solid #222', borderTop: '1px solid #222' }}>
+                          <th style={{ width: '22px', padding: '2px 2px', textAlign: 'center', fontWeight: 700, fontSize: '8.5px' }}>No</th>
+                          <th style={{ padding: '2px 3px', textAlign: 'left', fontWeight: 700, fontSize: '8.5px' }}>Product Description</th>
+                          <th style={{ width: '38px', padding: '2px 2px', textAlign: 'center', fontWeight: 700, fontSize: '8.5px' }}>Qty</th>
+                          <th style={{ width: '44px', padding: '2px 2px', textAlign: 'right', fontWeight: 700, fontSize: '8.5px' }}>Rate</th>
+                          <th style={{ width: '50px', padding: '2px 2px', textAlign: 'right', fontWeight: 700, fontSize: '8.5px' }}>Amount</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {viewedReturn.exchangeItems.map((item, index) => (
+                          <tr key={item.productId} style={{ borderBottom: '0.5px solid #e0e0e0', verticalAlign: 'top' }}>
+                            <td style={{ padding: '2px 2px', textAlign: 'center', color: '#666', fontFamily: 'monospace', fontSize: '8.5px' }}>{index + 1}</td>
+                            <td style={{ padding: '2px 3px', fontWeight: 600, lineHeight: '1.25' }}>
+                              {item.name}
+                              {item.gstPercent > 0 && <span style={{ fontSize: '8px', color: '#aaa', marginLeft: '3px' }}>({item.gstPercent}%)</span>}
+                            </td>
+                            <td style={{ padding: '2px 2px', textAlign: 'center', fontWeight: 700 }}>{item.quantity}<span style={{ fontSize: '8px', fontWeight: 400, color: '#777', marginLeft: '1px' }}>{item.unit || ''}</span></td>
+                            <td style={{ padding: '2px 2px', textAlign: 'right', fontFamily: 'monospace' }}>{(item.rate ?? 0).toFixed(2)}</td>
+                            <td style={{ padding: '2px 2px', textAlign: 'right', fontFamily: 'monospace', fontWeight: 700 }}>{(item.total ?? 0).toFixed(2)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+
+                {/* Totals + Declaration – side by side, ultra-compact */}
+                <div style={{ borderTop: '1.5px solid #222', marginTop: '3px', paddingTop: '3px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', fontSize: '9px' }}>
+                  {/* Left: mini declaration & settlement mode */}
+                  <div style={{ width: '48%' }}>
+                    <div style={{ fontSize: '8px', marginBottom: '2px' }}>Refund Mode: <strong style={{ textTransform: 'uppercase' }}>{viewedReturn.refundMode || 'N/A'}</strong></div>
+                    <div style={{ fontSize: '8px', marginBottom: '2px' }}>Reason: <strong style={{ textTransform: 'uppercase' }}>{viewedReturn.reason}</strong></div>
+                    <div style={{ fontSize: '7.5px', color: '#666', lineHeight: '1.2' }}>
+                      <em>This document serves as certified confirmation of receipt of returned stock.</em>
+                    </div>
+                  </div>
+
+                  {/* Right: financial summary */}
+                  <div style={{ width: '50%', fontSize: '9px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: '#555' }}>Gross Returned:</span>
+                      <span style={{ fontFamily: 'monospace' }}>₹{(viewedReturn.grandTotal ?? 0).toFixed(2)}</span>
+                    </div>
+                    {viewedReturn.exchangeTotal !== undefined && viewedReturn.exchangeTotal !== null && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ color: '#555' }}>Gross Exchanged:</span>
+                        <span style={{ fontFamily: 'monospace' }}>₹{(viewedReturn.exchangeTotal ?? 0).toFixed(2)}</span>
+                      </div>
+                    )}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 900, fontSize: '11px', borderTop: '1px solid #555', marginTop: '2px', paddingTop: '2px' }}>
+                      <span>
+                        {(viewedReturn.differenceAmount || 0) < 0 ? 'Refund Due' : (viewedReturn.differenceAmount || 0) > 0 ? 'Collectable' : 'Balanced'}
+                      </span>
+                      <span style={{ fontFamily: 'monospace' }}>₹{Math.abs(viewedReturn.differenceAmount || 0).toLocaleString('en-IN')}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Footer – single row, minimal height */}
+                <div style={{ borderTop: '1px solid #ccc', marginTop: '4px', paddingTop: '3px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', fontSize: '8px' }}>
+                  <span style={{ color: '#666', fontStyle: 'italic' }}>Thank you! Visit again.</span>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ borderBottom: '0.8px solid #333', width: '100px', marginBottom: '1px' }}></div>
+                    <span style={{ fontSize: '7.5px', fontWeight: 700, textTransform: 'uppercase', color: '#555' }}>Authorized Signatory</span>
+                  </div>
                 </div>
               </div>
             ) : (

@@ -87,7 +87,7 @@ export const BillPreview: React.FC<BillPreviewProps> = ({ bill, onConvert }) => 
   const docType = bill.docType || 'invoice';
   
   // Available template selections
-  const [template, setTemplate] = useState<'a4' | 'thermal'>('a4');
+  const [template, setTemplate] = useState<'a4' | 'thermal' | 'a5'>('a4');
   const [formatType, setFormatType] = useState<string>(docType);
   const [zoom, setZoom] = useState(100);
   const { bills, createBill, updateProduct, products, recordPayment } = useApp();
@@ -173,6 +173,15 @@ export const BillPreview: React.FC<BillPreviewProps> = ({ bill, onConvert }) => 
               <Printer className="h-3.5 w-3.5" />
               <span>80mm Thermal</span>
             </button>
+            <button
+              onClick={() => setTemplate('a5')}
+              className={`px-3 py-1 rounded-md text-[11px] font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                template === 'a5' ? 'bg-white text-black shadow-sm' : 'text-gray-500 hover:text-black'
+              }`}
+            >
+              <FileText className="h-3.5 w-3.5" />
+              <span>A5 Compact Bill</span>
+            </button>
           </div>
 
           {/* Select Printing Layout format */}
@@ -251,8 +260,10 @@ export const BillPreview: React.FC<BillPreviewProps> = ({ bill, onConvert }) => 
           <div className="bg-white text-black p-1 shadow-md">
             {template === 'a4' ? (
               <A4UniversalTemplate bill={bill} formatType={formatType} />
-            ) : (
+            ) : template === 'thermal' ? (
               <ThermalReceiptTemplate bill={bill} />
+            ) : (
+              <A5CompactTemplate bill={bill} />
             )}
           </div>
         </div>
@@ -477,18 +488,18 @@ const A4UniversalTemplate: React.FC<A4UniversalProps> = ({ bill, formatType }) =
                   </div>
 
                   {/* CENTER: Company Details (centered vertically & horizontally) */}
-                  <div className="flex-1 flex flex-col justify-center items-center text-center">
-                    <h1 className="text-xl font-black tracking-tight text-gray-900 leading-tight">
+                  <div className="flex-1 flex flex-col justify-start items-center text-center space-y-0 pt-0.5">
+                    <h1 className="text-lg font-black tracking-tight text-gray-900 leading-none">
                       {businessDetails.name || 'ELECTRICAL ERP'}
                     </h1>
-                    <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">
+                    <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest leading-none pt-0.5">
                       {subtitle === 'GST TAX INVOICE' ? 'INVOICE' : subtitle}
                     </p>
-                    <p className="text-xs text-gray-600 leading-snug max-w-sm font-medium mx-auto">
+                    <p className="text-[11px] text-gray-600 leading-tight max-w-sm font-medium mx-auto pt-1">
                       {businessDetails.address}
                       {businessDetails.city ? `, ${businessDetails.city}` : ''}{businessDetails.state ? `, ${businessDetails.state}` : ''}{businessDetails.pincode ? ` - ${businessDetails.pincode}` : ''}
                     </p>
-                    <div className="text-[11px] text-gray-600 font-medium">
+                    <div className="text-[11px] text-gray-600 font-medium leading-tight pt-0.5">
                       <div>Phone: <span className="font-semibold text-gray-900">{businessDetails.phone}</span> {businessDetails.altPhone && `| ${businessDetails.altPhone}`}</div>
                       {businessDetails.email && <div>Email: <span className="font-semibold text-gray-900">{businessDetails.email}</span></div>}
                       {businessDetails.gstNumber && <div className="text-[10px] uppercase font-bold text-black">GSTIN: {businessDetails.gstNumber}</div>}
@@ -749,61 +760,64 @@ const ThermalReceiptTemplate: React.FC<BillPreviewProps> = ({ bill }) => {
   };
 
   return (
-    <div id="thermal-print-element" className="w-[280px] bg-white text-black p-3.5 font-mono text-[10px] border border-gray-300 flex flex-col gap-2.5 select-none leading-relaxed print:border-none print:shadow-none print:p-0">
+    <div id="thermal-print-element" className="w-[280px] bg-white text-black p-3 font-mono text-[10px] flex flex-col select-none leading-tight print:p-3 print:border-none print:shadow-none mx-auto">
       
       {/* Header */}
-      <div className="text-center space-y-1">
-        <h2 className="font-bold text-sm uppercase tracking-tight">{businessDetails.name || 'ELECTRICAL ERP'}</h2>
-        <p className="text-[9px] text-gray-500 leading-tight">{businessDetails.address}, {businessDetails.city}</p>
-        <p className="text-[9px] text-gray-500">Tel: {businessDetails.phone}</p>
-        {businessDetails.gstNumber && <p className="text-[9px] font-black uppercase">GSTIN: {businessDetails.gstNumber}</p>}
-        <div className="border-b border-dashed border-black py-0.5"></div>
+      <div className="text-center space-y-1 mb-1">
+        <h2 className="font-black text-[13px] uppercase tracking-tight leading-none pt-1">{businessDetails.name || 'ELECTRICAL ERP'}</h2>
+        <p className="text-[9px] pt-1">Tel: {businessDetails.phone}</p>
+        {businessDetails.gstNumber && <p className="text-[9px]">GSTIN: {businessDetails.gstNumber}</p>}
       </div>
+      <div className="border-b border-dashed border-black mb-1.5 mt-1.5"></div>
 
       {/* Bill specifications */}
-      <div className="text-[9px] space-y-0.5 font-semibold">
-        <div>Doc Type: <span className="font-bold uppercase text-black">{bill.docType || 'INVOICE'}</span></div>
-        <div>No: <span className="font-bold text-black">{bill.billNumber}</span></div>
-        <div>Date/Time: {formatDate(bill.date)} {bill.time}</div>
-        <div>Customer: <span className="font-bold text-black">{bill.customerName}</span></div>
-        {bill.customerAddress && <div>Place: <span className="font-bold text-black">{bill.customerAddress}</span></div>}
-        <div>Cashier: Administrator</div>
-        <div className="border-b border-dashed border-black py-0.5"></div>
+      <div className="grid grid-cols-[60px_10px_auto] gap-x-0 text-[9px] font-medium leading-snug mb-1.5">
+        <div>Doc Type</div><div>:</div><div className="font-bold uppercase text-black">{bill.docType || 'INVOICE'}</div>
+        <div>No</div><div>:</div><div className="font-bold text-black">{bill.billNumber}</div>
+        <div>Date/Time</div><div>:</div><div>{formatDate(bill.date)} {bill.time}</div>
+        <div>Customer</div><div>:</div><div className="font-bold text-black">{bill.customerName}</div>
+        {bill.customerAddress && (
+          <><div>Place</div><div>:</div><div className="font-bold text-black">{bill.customerAddress}</div></>
+        )}
+        <div>Cashier</div><div>:</div><div>Administrator</div>
       </div>
+      <div className="border-b border-dashed border-black mb-1.5"></div>
 
       {/* Receipt Item List */}
       <table className="w-full text-left text-[10px]">
         <thead>
-          <tr className="border-b border-dashed border-black font-bold">
-            <th className="py-1">Item Description</th>
-            <th className="w-10 text-center py-1">Qty</th>
-            <th className="w-14 text-right py-1">Total</th>
+          <tr className="font-bold border-b border-dashed border-black">
+            <th className="w-6 pb-1 align-bottom">No</th>
+            <th className="pb-1 pr-1 align-bottom">Item Description</th>
+            <th className="w-8 text-center pb-1 align-bottom">Qty</th>
+            <th className="w-14 text-right pb-1 align-bottom">Amount</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-dashed divide-gray-100">
-          {bill.items.map((item) => (
+        <tbody className="">
+          {bill.items.map((item, index) => (
             <tr key={item.id} className="align-top">
-              <td className="py-1 font-bold">
+              <td className="pt-2 pr-1">{index + 1}</td>
+              <td className="pt-2 pr-1">
                 {item.name}
-                <span className="block text-[8px] text-gray-500 font-normal">@{(item.rate ?? 0).toFixed(2)} {item.discountPercent > 0 ? `(Less ${item.discountPercent}%)` : ''}</span>
+                <span className="block text-[9px] text-gray-800 mt-0.5">@{(item.rate ?? 0).toFixed(2)}</span>
               </td>
-              <td className="text-center py-1 font-bold">{item.quantity}</td>
-              <td className="text-right py-1">₹{(item.total ?? 0).toFixed(2)}</td>
+              <td className="text-center pt-2">{item.quantity}</td>
+              <td className="text-right pt-2">₹{(item.total ?? 0).toFixed(2)}</td>
             </tr>
           ))}
         </tbody>
       </table>
 
-      <div className="border-b border-dashed border-black py-0.5"></div>
+      <div className="border-b border-dashed border-black mt-2 mb-1.5"></div>
 
       {/* Financials Summary */}
-      <div className="text-[10px] space-y-0.5 font-medium">
+      <div className="text-[10px] space-y-1 font-medium mb-2">
         <div className="flex justify-between">
           <span>Items Subtotal:</span>
           <span>₹{(bill.subtotal ?? 0).toFixed(2)}</span>
         </div>
         {bill.discountAmount > 0 && (
-          <div className="flex justify-between text-red-600 font-bold">
+          <div className="flex justify-between">
             <span>Discounts:</span>
             <span>-₹{(bill.discountAmount ?? 0).toFixed(2)}</span>
           </div>
@@ -820,14 +834,14 @@ const ThermalReceiptTemplate: React.FC<BillPreviewProps> = ({ bill }) => {
             <span>₹{(bill.roundOff ?? 0).toFixed(2)}</span>
           </div>
         )}
-        <div className="flex justify-between font-bold text-xs pt-1 border-t border-dashed border-black text-black">
+        <div className="flex justify-between font-bold text-[11px] pt-0.5">
           <span>GRAND TOTAL:</span>
           <span>₹{(bill.grandTotal ?? 0).toFixed(2)}</span>
         </div>
         
-        <div className="flex justify-between pt-1">
+        <div className="flex justify-between pt-0.5">
           <span>Payment Mode:</span>
-          <span className="font-bold uppercase text-black">{bill.paymentMode}</span>
+          <span className="uppercase">{bill.paymentMode}</span>
         </div>
 
         <div className="flex justify-between">
@@ -836,32 +850,161 @@ const ThermalReceiptTemplate: React.FC<BillPreviewProps> = ({ bill }) => {
         </div>
         
         {bill.balanceAmount > 0 && (
-          <div className="flex justify-between text-red-600 font-bold border-t border-dotted border-red-500 pt-0.5">
+          <div className="flex justify-between font-bold border-t border-dashed border-black pt-1 mt-1">
             <span>Balance Outstanding:</span>
             <span>₹{(bill.balanceAmount ?? 0).toFixed(2)}</span>
           </div>
         )}
       </div>
 
-      <div className="border-b border-dashed border-black py-0.5"></div>
+      <div className="border-b border-dashed border-black mb-3"></div>
 
       {/* Barcode & QR Code for Thermal paper */}
-      <div className="py-1 space-y-2">
+      <div className="flex justify-center mb-3">
         <BarcodeSVG value={bill.billNumber} />
-        {businessDetails.upiId && (
-          <div className="flex justify-center pt-1">
-            <QRCodeSVG value={`upi://pay?pa=${businessDetails.upiId}&pn=${businessDetails.name}&am=${bill.grandTotal}&cu=INR`} />
-          </div>
-        )}
       </div>
 
       {/* Footer thank-you note */}
-      <div className="text-center text-[9px] space-y-0.5 py-1 text-gray-500">
+      <div className="text-center text-[9px] space-y-1 pb-2">
         <p className="font-bold text-black">♥ THANK YOU FOR VISITING! ♥</p>
         <p>Save Electricity, Save water.</p>
-        <p className="text-[8px]">Invoiced securely via ERP POS Prime</p>
+        <p>Invoiced securely via ERP POS Prime</p>
       </div>
 
+      <div className="border-b border-dashed border-black"></div>
+
+    </div>
+  );
+};
+
+/* ==========================================
+   A5 COMPACT BILL TEMPLATE
+============================================= */
+const A5CompactTemplate: React.FC<BillPreviewProps> = ({ bill }) => {
+  const { businessDetails } = useApp();
+  
+  const formatDate = (dStr: string) => {
+    try {
+      const d = new Date(dStr);
+      return d.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    } catch {
+      return dStr;
+    }
+  };
+
+  const totalItemsCount = bill.items.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
+  const gstAmount = (bill.cgst ?? 0) + (bill.sgst ?? 0) + (bill.igst ?? 0);
+
+  return (
+    <div id="a5-print-element" className="w-[148mm] bg-white text-black font-sans select-none mx-auto print:border-none print:shadow-none box-border" style={{ padding: '6px 8px', fontSize: '10px', lineHeight: '1.3' }}>
+      
+      {/* Header – compact, single-block */}
+      <div style={{ textAlign: 'center', borderBottom: '1.5px solid #111', paddingBottom: '3px', marginBottom: '3px' }}>
+        <div style={{ fontSize: '14px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.02em', lineHeight: '1.2' }}>
+          {businessDetails.name || 'SHOP NAME'}
+        </div>
+        {businessDetails.address && (
+          <div style={{ fontSize: '9px', color: '#444', lineHeight: '1.2' }}>{businessDetails.address}</div>
+        )}
+        <div style={{ fontSize: '9px', color: '#444', lineHeight: '1.2' }}>
+          Ph: {businessDetails.phone}
+          {businessDetails.gstNumber && <span style={{ marginLeft: '8px', fontWeight: 700 }}>GSTIN: {businessDetails.gstNumber}</span>}
+        </div>
+      </div>
+
+      {/* Invoice meta + Customer – two columns, zero wasted space */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid #aaa', paddingBottom: '3px', marginBottom: '3px', fontSize: '9px' }}>
+        <div>
+          <span style={{ color: '#777', fontWeight: 700, textTransform: 'uppercase', fontSize: '8px' }}>Party: </span>
+          <span style={{ fontWeight: 800, textTransform: 'uppercase', fontSize: '10px' }}>{bill.customerName || 'Cash'}</span>
+          {bill.customerAddress && <div style={{ color: '#555' }}>{bill.customerAddress}</div>}
+        </div>
+        <div style={{ textAlign: 'right' }}>
+          <div><span style={{ color: '#777' }}>Invoice: </span><strong>{bill.billNumber}</strong></div>
+          <div><span style={{ color: '#777' }}>Date: </span><strong>{formatDate(bill.date)}</strong>{bill.time && <span style={{ marginLeft: '6px', color: '#777' }}>Time: <strong>{bill.time}</strong></span>}</div>
+        </div>
+      </div>
+
+      {/* Product Table */}
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '9.5px' }}>
+        <thead>
+          <tr style={{ borderBottom: '1.5px solid #222', borderTop: '1px solid #222' }}>
+            <th style={{ width: '22px', padding: '2px 2px', textAlign: 'center', fontWeight: 700, textTransform: 'uppercase', fontSize: '8.5px' }}>No</th>
+            <th style={{ padding: '2px 3px', textAlign: 'left', fontWeight: 700, textTransform: 'uppercase', fontSize: '8.5px' }}>Product Description</th>
+            <th style={{ width: '38px', padding: '2px 2px', textAlign: 'center', fontWeight: 700, textTransform: 'uppercase', fontSize: '8.5px' }}>Qty</th>
+            <th style={{ width: '44px', padding: '2px 2px', textAlign: 'right', fontWeight: 700, textTransform: 'uppercase', fontSize: '8.5px' }}>Rate</th>
+            <th style={{ width: '50px', padding: '2px 2px', textAlign: 'right', fontWeight: 700, textTransform: 'uppercase', fontSize: '8.5px' }}>Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          {bill.items.map((item, index) => (
+            <tr key={item.id} style={{ borderBottom: '0.5px solid #e0e0e0', verticalAlign: 'top' }}>
+              <td style={{ padding: '2px 2px', textAlign: 'center', color: '#666', fontFamily: 'monospace', fontSize: '8.5px' }}>{index + 1}</td>
+              <td style={{ padding: '2px 3px', fontWeight: 600, lineHeight: '1.25' }}>
+                {item.name}
+                {bill.gstEnabled && item.gstPercent > 0 && (
+                  <span style={{ fontSize: '8px', color: '#aaa', marginLeft: '3px' }}>({item.gstPercent}%)</span>
+                )}
+              </td>
+              <td style={{ padding: '2px 2px', textAlign: 'center', fontWeight: 700 }}>
+                {item.quantity}<span style={{ fontSize: '8px', fontWeight: 400, color: '#777', marginLeft: '1px' }}>{item.unit || ''}</span>
+              </td>
+              <td style={{ padding: '2px 2px', textAlign: 'right', fontFamily: 'monospace' }}>{(item.rate ?? 0).toFixed(2)}</td>
+              <td style={{ padding: '2px 2px', textAlign: 'right', fontFamily: 'monospace', fontWeight: 700 }}>{(item.total ?? 0).toFixed(2)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      {/* Totals + Declaration – side by side, ultra-compact */}
+      <div style={{ borderTop: '1.5px solid #222', marginTop: '3px', paddingTop: '3px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', fontSize: '9px' }}>
+        {/* Left: total pieces + mini declaration */}
+        <div style={{ width: '48%' }}>
+          <div style={{ fontWeight: 700, fontSize: '9px', marginBottom: '2px' }}>Total Pcs: <strong>{totalItemsCount}</strong></div>
+          <div style={{ fontSize: '7.5px', color: '#666', lineHeight: '1.2' }}>
+            <em>We declare that this invoice shows the actual price of the goods and all particulars are true and correct.</em>
+          </div>
+        </div>
+
+        {/* Right: financial summary */}
+        <div style={{ width: '50%', fontSize: '9px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span style={{ color: '#555' }}>Subtotal:</span>
+            <span style={{ fontFamily: 'monospace' }}>₹{(bill.subtotal ?? 0).toFixed(2)}</span>
+          </div>
+          {bill.discountAmount > 0 && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#c00' }}>
+              <span>Discount:</span>
+              <span style={{ fontFamily: 'monospace' }}>-₹{(bill.discountAmount ?? 0).toFixed(2)}</span>
+            </div>
+          )}
+          {gstAmount > 0 && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#444' }}>
+              <span>GST:</span>
+              <span style={{ fontFamily: 'monospace' }}>₹{gstAmount.toFixed(2)}</span>
+            </div>
+          )}
+          {bill.roundOff !== 0 && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#444' }}>
+              <span>Round Off:</span>
+              <span style={{ fontFamily: 'monospace' }}>₹{(bill.roundOff ?? 0).toFixed(2)}</span>
+            </div>
+          )}
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 900, fontSize: '11px', borderTop: '1px solid #555', marginTop: '2px', paddingTop: '2px' }}>
+            <span>Net Amount:</span>
+            <span style={{ fontFamily: 'monospace' }}>₹{(bill.grandTotal ?? 0).toFixed(2)}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Footer – single row, minimal height */}
+      <div style={{ borderTop: '1px solid #ccc', marginTop: '4px', paddingTop: '3px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', fontSize: '8px' }}>
+        <span style={{ color: '#666', fontStyle: 'italic' }}>Thank you! Visit again.</span>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ borderBottom: '0.8px solid #333', width: '100px', marginBottom: '1px' }}></div>
+          <span style={{ fontSize: '7.5px', fontWeight: 700, textTransform: 'uppercase', color: '#555' }}>Authorized Signatory</span>
+        </div>
+      </div>
     </div>
   );
 };
@@ -872,7 +1015,14 @@ export const printA4Element = async () => {
 
   if (!element) {
     element = document.getElementById('thermal-print-element');
-    templateType = 'thermal';
+    if (element) {
+      templateType = 'thermal';
+    } else {
+      element = document.getElementById('a5-print-element');
+      if (element) {
+        templateType = 'a5';
+      }
+    }
   }
 
   if (!element) {
@@ -883,7 +1033,7 @@ export const printA4Element = async () => {
   const printWindow = window.open(
     '',
     '_blank',
-    templateType === 'thermal' ? 'width=350,height=600' : 'width=900,height=1200'
+    templateType === 'thermal' ? 'width=350,height=600' : templateType === 'a5' ? 'width=650,height=900' : 'width=900,height=1200'
   );
 
   if (!printWindow) {
@@ -895,6 +1045,15 @@ export const printA4Element = async () => {
     .map(s => s.outerHTML)
     .join('');
 
+  let pageStyle = '';
+  if (templateType === 'thermal') {
+    pageStyle = `body { min-height: 0 !important; width: 80mm !important; margin: 0; padding: 0; background: white !important; }`;
+  } else if (templateType === 'a5') {
+    pageStyle = `@page { size: A5 portrait; margin: 5mm; } body { width: 148mm !important; margin: 0 auto; padding: 0; background: white !important; }`;
+  } else {
+    pageStyle = `@page { margin: 0; }`;
+  }
+
   printWindow.document.write(`
     <!DOCTYPE html>
     <html>
@@ -903,9 +1062,10 @@ export const printA4Element = async () => {
         ${styles}
         <style>
           @media print {
-            @page { margin: 0; }
-            body { margin: 0; }
+            ${pageStyle}
             * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            tr { break-inside: avoid; page-break-inside: avoid; }
+            thead { display: table-header-group; }
           }
         </style>
       </head>
@@ -928,6 +1088,27 @@ export const printA4Element = async () => {
   });
 
   await new Promise(resolve => setTimeout(resolve, 250));
+
+  if (templateType === 'thermal') {
+    const printElement = printWindow.document.getElementById('thermal-print-element');
+    if (printElement) {
+      // Wait for any images to load
+      const images = Array.from(printElement.getElementsByTagName('img'));
+      await Promise.all(images.map(img => {
+        if (img.complete) return Promise.resolve();
+        return new Promise(resolve => { img.onload = resolve; img.onerror = resolve; });
+      }));
+
+      // Measure height in pixels
+      const pxHeight = printElement.offsetHeight;
+      // Convert to mm (px * 25.4 / 96) and add 1mm safety allowance to prevent clipping
+      const mmHeight = Math.ceil((pxHeight * 25.4) / 96) + 1;
+      
+      const dynamicStyle = printWindow.document.createElement('style');
+      dynamicStyle.innerHTML = `@media print { @page { size: 80mm ${mmHeight}mm !important; margin: 0; } }`;
+      printWindow.document.head.appendChild(dynamicStyle);
+    }
+  }
 
   if (templateType === 'a4') {
     printWindow.document.body.classList.add('a4-print-measure-mode');
