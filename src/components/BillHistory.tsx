@@ -20,12 +20,13 @@ export const BillHistory: React.FC = () => {
   // Active modal preview state
   const [activePreviewBill, setActivePreviewBill] = useState<Bill | null>(null);
 
-  // Filters calculation
   const filteredBills = bills.filter(bill => {
-    const matchesSearch = 
-      bill.billNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      bill.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      bill.customerMobile.includes(searchTerm);
+    const lc = searchTerm.toLowerCase();
+    const matchesSearch =
+      bill.billNumber.toLowerCase().includes(lc) ||
+      bill.customerName.toLowerCase().includes(lc) ||
+      (bill.customerAddress || '').toLowerCase().includes(lc);
+
     
     const matchesStatus = 
       statusFilter === 'all' || 
@@ -81,7 +82,7 @@ export const BillHistory: React.FC = () => {
           <div className="relative max-w-xs w-full">
             <input
               type="text"
-              placeholder="Search Invoice #, Client..."
+              placeholder="Search Invoice #, Customer or Place..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full text-xs font-semibold border border-gray-200 rounded-lg pl-8 pr-3 py-1.5 focus:outline-none focus:border-black bg-white"
@@ -184,7 +185,9 @@ export const BillHistory: React.FC = () => {
                       {/* Customer info */}
                       <td className="p-3">
                         <div className="font-bold text-gray-800">{bill.customerName}</div>
-                        <div className="text-[10px] text-gray-400 mt-0.5">Mob: {bill.customerMobile}</div>
+                        <div className="text-[10px] text-gray-400 mt-0.5">
+                          {bill.customerAddress ? bill.customerAddress : 'Place not specified'}
+                        </div>
                       </td>
 
                       {/* Doc Type Badge */}

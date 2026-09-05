@@ -879,10 +879,13 @@ const ThermalReceiptTemplate: React.FC<BillPreviewProps> = ({ bill }) => {
 
 /* ==========================================
    A5 COMPACT BILL TEMPLATE
+   Fixed page: 148mm × 210mm portrait
+   ~20 products per page capacity
+   Matches reference IMAGE 1 / IMAGE 2 layout
 ============================================= */
 const A5CompactTemplate: React.FC<BillPreviewProps> = ({ bill }) => {
   const { businessDetails } = useApp();
-  
+
   const formatDate = (dStr: string) => {
     try {
       const d = new Date(dStr);
@@ -895,114 +898,161 @@ const A5CompactTemplate: React.FC<BillPreviewProps> = ({ bill }) => {
   const totalItemsCount = bill.items.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
   const gstAmount = (bill.cgst ?? 0) + (bill.sgst ?? 0) + (bill.igst ?? 0);
 
+  // ── FIXED A5 PAGE FRAME ──────────────────────────────────────────────────
+  // Outer div is exactly 148mm × 210mm — never grows or shrinks.
+  // flex-column layout: header + meta are fixed-size (flexShrink:0),
+  // product table fills remaining space (flex:1), totals + footer are fixed.
+  // Font/padding tuned so ~20 standard product rows fit within the page.
   return (
-    <div id="a5-print-element" className="w-[148mm] bg-white text-black font-sans select-none mx-auto print:border-none print:shadow-none box-border" style={{ padding: '6px 8px', fontSize: '10px', lineHeight: '1.3' }}>
-      
-      {/* Header – compact, single-block */}
-      <div style={{ textAlign: 'center', borderBottom: '1.5px solid #111', paddingBottom: '3px', marginBottom: '3px' }}>
-        <div style={{ fontSize: '14px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.02em', lineHeight: '1.2' }}>
+    <div
+      id="a5-print-element"
+      style={{
+        width: '148mm',
+        height: '210mm',
+        boxSizing: 'border-box',
+        padding: '5mm 5mm',        // 5mm internal margin all around
+        background: 'white',
+        color: '#111',
+        fontFamily: 'Arial, Helvetica, sans-serif',
+        fontSize: '9.5px',         // Base body size — compact but readable
+        lineHeight: '1.35',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+        position: 'relative',
+      }}
+    >
+      {/* ── HEADER ── */}
+      <div style={{ textAlign: 'center', borderBottom: '1.5px solid #111', paddingBottom: '3px', marginBottom: '3px', flexShrink: 0 }}>
+        {/* Salutation / tagline */}
+        <div style={{ fontSize: '8.5px', color: '#555', marginBottom: '1px' }}>
+          {businessDetails.tagline || 'KHIMAI MATAJI NAMAH'}
+        </div>
+
+        {/* Shop name */}
+        <div style={{ fontSize: '15px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.03em', lineHeight: '1.2' }}>
           {businessDetails.name || 'SHOP NAME'}
         </div>
+
+        {/* Document type */}
+        <div style={{ fontSize: '9.5px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '1px' }}>
+          ESTIMATE / INVOICE
+        </div>
+
+        {/* Address + Phone + GSTIN */}
         {businessDetails.address && (
-          <div style={{ fontSize: '9px', color: '#444', lineHeight: '1.2' }}>{businessDetails.address}</div>
+          <div style={{ fontSize: '8.5px', color: '#444', marginTop: '1px' }}>{businessDetails.address}</div>
         )}
-        <div style={{ fontSize: '9px', color: '#444', lineHeight: '1.2' }}>
+        <div style={{ fontSize: '8.5px', color: '#444' }}>
           Ph: {businessDetails.phone}
-          {businessDetails.gstNumber && <span style={{ marginLeft: '8px', fontWeight: 700 }}>GSTIN: {businessDetails.gstNumber}</span>}
+          {businessDetails.gstNumber && (
+            <span style={{ marginLeft: '8px', fontWeight: 700 }}>GSTIN: {businessDetails.gstNumber}</span>
+          )}
         </div>
       </div>
 
-      {/* Invoice meta + Customer – two columns, zero wasted space */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid #aaa', paddingBottom: '3px', marginBottom: '3px', fontSize: '9px' }}>
+      {/* ── INVOICE META ROW ── */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '0.75px solid #bbb', paddingBottom: '2px', marginBottom: '2px', fontSize: '9.5px', flexShrink: 0 }}>
         <div>
-          <span style={{ color: '#777', fontWeight: 700, textTransform: 'uppercase', fontSize: '8px' }}>Party: </span>
-          <span style={{ fontWeight: 800, textTransform: 'uppercase', fontSize: '10px' }}>{bill.customerName || 'Cash'}</span>
-          {bill.customerAddress && <div style={{ color: '#555' }}>{bill.customerAddress}</div>}
+          <span>Inv. No : </span><strong style={{ fontSize: '10.5px' }}>{bill.billNumber}</strong>
         </div>
-        <div style={{ textAlign: 'right' }}>
-          <div><span style={{ color: '#777' }}>Invoice: </span><strong>{bill.billNumber}</strong></div>
-          <div><span style={{ color: '#777' }}>Date: </span><strong>{formatDate(bill.date)}</strong>{bill.time && <span style={{ marginLeft: '6px', color: '#777' }}>Time: <strong>{bill.time}</strong></span>}</div>
+        <div>
+          <span>Date : </span><strong>{formatDate(bill.date)}</strong>
+          {bill.time && <span style={{ marginLeft: '6px' }}>Time: <strong>{bill.time}</strong></span>}
         </div>
       </div>
 
-      {/* Product Table */}
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '9.5px' }}>
-        <thead>
-          <tr style={{ borderBottom: '1.5px solid #222', borderTop: '1px solid #222' }}>
-            <th style={{ width: '22px', padding: '2px 2px', textAlign: 'center', fontWeight: 700, textTransform: 'uppercase', fontSize: '8.5px' }}>No</th>
-            <th style={{ padding: '2px 3px', textAlign: 'left', fontWeight: 700, textTransform: 'uppercase', fontSize: '8.5px' }}>Product Description</th>
-            <th style={{ width: '38px', padding: '2px 2px', textAlign: 'center', fontWeight: 700, textTransform: 'uppercase', fontSize: '8.5px' }}>Qty</th>
-            <th style={{ width: '44px', padding: '2px 2px', textAlign: 'right', fontWeight: 700, textTransform: 'uppercase', fontSize: '8.5px' }}>Rate</th>
-            <th style={{ width: '50px', padding: '2px 2px', textAlign: 'right', fontWeight: 700, textTransform: 'uppercase', fontSize: '8.5px' }}>Amount</th>
-          </tr>
-        </thead>
-        <tbody>
-          {bill.items.map((item, index) => (
-            <tr key={item.id} style={{ borderBottom: '0.5px solid #e0e0e0', verticalAlign: 'top' }}>
-              <td style={{ padding: '2px 2px', textAlign: 'center', color: '#666', fontFamily: 'monospace', fontSize: '8.5px' }}>{index + 1}</td>
-              <td style={{ padding: '2px 3px', fontWeight: 600, lineHeight: '1.25' }}>
-                {item.name}
-                {bill.gstEnabled && item.gstPercent > 0 && (
-                  <span style={{ fontSize: '8px', color: '#aaa', marginLeft: '3px' }}>({item.gstPercent}%)</span>
-                )}
-              </td>
-              <td style={{ padding: '2px 2px', textAlign: 'center', fontWeight: 700 }}>
-                {item.quantity}<span style={{ fontSize: '8px', fontWeight: 400, color: '#777', marginLeft: '1px' }}>{item.unit || ''}</span>
-              </td>
-              <td style={{ padding: '2px 2px', textAlign: 'right', fontFamily: 'monospace' }}>{(item.rate ?? 0).toFixed(2)}</td>
-              <td style={{ padding: '2px 2px', textAlign: 'right', fontFamily: 'monospace', fontWeight: 700 }}>{(item.total ?? 0).toFixed(2)}</td>
+      {/* ── PARTY NAME ROW ── */}
+      <div style={{ borderBottom: '0.75px solid #bbb', paddingBottom: '2px', marginBottom: '3px', fontSize: '9.5px', flexShrink: 0 }}>
+        <span>Party Name : </span>
+        <strong>{bill.customerName || ''}</strong>
+        {bill.customerAddress && <span style={{ marginLeft: '6px', color: '#555' }}>{bill.customerAddress}</span>}
+      </div>
+
+      {/* ── PRODUCT TABLE — flex:1 fills all remaining vertical space ── */}
+      <div style={{ flex: 1, overflow: 'hidden', marginBottom: '2px' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '9.5px' }}>
+          <thead>
+            <tr style={{ borderTop: '1.5px solid #222', borderBottom: '1.5px solid #222' }}>
+              <th style={{ width: '24px', padding: '2px 2px', textAlign: 'center', fontWeight: 700 }}>No</th>
+              <th style={{ padding: '2px 3px', textAlign: 'left', fontWeight: 700 }}>Name</th>
+              <th style={{ width: '38px', padding: '2px 2px', textAlign: 'center', fontWeight: 700 }}>Qty</th>
+              <th style={{ width: '46px', padding: '2px 2px', textAlign: 'right', fontWeight: 700 }}>Rate</th>
+              <th style={{ width: '54px', padding: '2px 2px', textAlign: 'right', fontWeight: 700 }}>Amount</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {bill.items.map((item, index) => (
+              <tr key={item.id} style={{ borderBottom: '0.5px solid #e0e0e0', verticalAlign: 'top' }}>
+                <td style={{ padding: '2px 2px', textAlign: 'center', color: '#666' }}>{index + 1}</td>
+                <td style={{ padding: '2px 3px', fontWeight: 600, lineHeight: '1.25' }}>
+                  {item.name}
+                  {bill.gstEnabled && item.gstPercent > 0 && (
+                    <span style={{ fontSize: '8px', color: '#aaa', marginLeft: '2px' }}>({item.gstPercent}%)</span>
+                  )}
+                </td>
+                <td style={{ padding: '2px 2px', textAlign: 'center', fontWeight: 700 }}>
+                  {item.quantity}
+                  {item.unit && <span style={{ fontSize: '8px', fontWeight: 400, color: '#777', marginLeft: '1px' }}>{item.unit}</span>}
+                </td>
+                <td style={{ padding: '2px 2px', textAlign: 'right', fontFamily: 'monospace' }}>{(item.rate ?? 0).toFixed(2)}</td>
+                <td style={{ padding: '2px 2px', textAlign: 'right', fontFamily: 'monospace', fontWeight: 700 }}>{(item.total ?? 0).toFixed(2)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
-      {/* Totals + Declaration – side by side, ultra-compact */}
-      <div style={{ borderTop: '1.5px solid #222', marginTop: '3px', paddingTop: '3px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', fontSize: '9px' }}>
-        {/* Left: total pieces + mini declaration */}
-        <div style={{ width: '48%' }}>
-          <div style={{ fontWeight: 700, fontSize: '9px', marginBottom: '2px' }}>Total Pcs: <strong>{totalItemsCount}</strong></div>
-          <div style={{ fontSize: '7.5px', color: '#666', lineHeight: '1.2' }}>
-            <em>We declare that this invoice shows the actual price of the goods and all particulars are true and correct.</em>
-          </div>
+      {/* ── TOTALS BLOCK ── */}
+      <div style={{ borderTop: '1.5px solid #222', paddingTop: '3px', marginBottom: '3px', flexShrink: 0 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9.5px', marginBottom: '1px' }}>
+          <span>Total Pcs :</span>
+          <span style={{ fontFamily: 'monospace' }}>{totalItemsCount}</span>
         </div>
-
-        {/* Right: financial summary */}
-        <div style={{ width: '50%', fontSize: '9px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span style={{ color: '#555' }}>Subtotal:</span>
-            <span style={{ fontFamily: 'monospace' }}>₹{(bill.subtotal ?? 0).toFixed(2)}</span>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9.5px', marginBottom: '1px' }}>
+          <span>Total Amount :</span>
+          <span style={{ fontFamily: 'monospace' }}>{(bill.subtotal ?? 0).toFixed(2)}</span>
+        </div>
+        {bill.discountAmount > 0 && (
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9.5px', marginBottom: '1px', color: '#c00' }}>
+            <span>Discount :</span>
+            <span style={{ fontFamily: 'monospace' }}>-{(bill.discountAmount ?? 0).toFixed(2)}</span>
           </div>
-          {bill.discountAmount > 0 && (
-            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#c00' }}>
-              <span>Discount:</span>
-              <span style={{ fontFamily: 'monospace' }}>-₹{(bill.discountAmount ?? 0).toFixed(2)}</span>
-            </div>
-          )}
-          {gstAmount > 0 && (
-            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#444' }}>
-              <span>GST:</span>
-              <span style={{ fontFamily: 'monospace' }}>₹{gstAmount.toFixed(2)}</span>
-            </div>
-          )}
-          {bill.roundOff !== 0 && (
-            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#444' }}>
-              <span>Round Off:</span>
-              <span style={{ fontFamily: 'monospace' }}>₹{(bill.roundOff ?? 0).toFixed(2)}</span>
-            </div>
-          )}
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 900, fontSize: '11px', borderTop: '1px solid #555', marginTop: '2px', paddingTop: '2px' }}>
-            <span>Net Amount:</span>
-            <span style={{ fontFamily: 'monospace' }}>₹{(bill.grandTotal ?? 0).toFixed(2)}</span>
+        )}
+        {gstAmount > 0 && (
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9.5px', marginBottom: '1px' }}>
+            <span>GST :</span>
+            <span style={{ fontFamily: 'monospace' }}>{gstAmount.toFixed(2)}</span>
           </div>
+        )}
+        {bill.roundOff !== undefined && bill.roundOff !== 0 && (
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9.5px', marginBottom: '1px' }}>
+            <span>Loading</span>
+            <span style={{ fontFamily: 'monospace' }}>{(bill.roundOff ?? 0).toFixed(2)}</span>
+          </div>
+        )}
+        {/* Net Amount — bold highlight */}
+        <div style={{ borderTop: '1.5px solid #222', marginTop: '2px', paddingTop: '2px', display: 'flex', justifyContent: 'space-between', fontWeight: 900, fontSize: '12px' }}>
+          <span>Net Amount</span>
+          <span style={{ fontFamily: 'monospace' }}>{(bill.grandTotal ?? 0).toFixed(2)}</span>
         </div>
       </div>
 
-      {/* Footer – single row, minimal height */}
-      <div style={{ borderTop: '1px solid #ccc', marginTop: '4px', paddingTop: '3px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', fontSize: '8px' }}>
-        <span style={{ color: '#666', fontStyle: 'italic' }}>Thank you! Visit again.</span>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ borderBottom: '0.8px solid #333', width: '100px', marginBottom: '1px' }}></div>
-          <span style={{ fontSize: '7.5px', fontWeight: 700, textTransform: 'uppercase', color: '#555' }}>Authorized Signatory</span>
+      {/* ── DECLARATION + AUTHORIZED SIGNATORY ── */}
+      <div style={{ borderTop: '0.75px solid #ccc', paddingTop: '3px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexShrink: 0 }}>
+        <div style={{ fontSize: '8.5px', color: '#333', maxWidth: '62%', lineHeight: '1.35' }}>
+          <div style={{ fontWeight: 700, marginBottom: '1px' }}>Declaration</div>
+          <div>
+            We declare that this invoice<br />
+            shows the actual price of the<br />
+            goods described and<br />
+            that all particulars are<br />
+            true and correct.
+          </div>
+        </div>
+        <div style={{ textAlign: 'center', fontSize: '8.5px' }}>
+          <div style={{ borderBottom: '0.75px solid #333', width: '85px', marginBottom: '2px' }}></div>
+          <div style={{ fontWeight: 700, fontSize: '8px', textTransform: 'uppercase' }}>Authorized Signatory</div>
         </div>
       </div>
     </div>
@@ -1049,7 +1099,7 @@ export const printA4Element = async () => {
   if (templateType === 'thermal') {
     pageStyle = `body { min-height: 0 !important; width: 80mm !important; margin: 0; padding: 0; background: white !important; }`;
   } else if (templateType === 'a5') {
-    pageStyle = `@page { size: A5 portrait; margin: 5mm; } body { width: 148mm !important; margin: 0 auto; padding: 0; background: white !important; }`;
+    pageStyle = `@page { size: A5 portrait; margin: 0; } html, body { margin: 0; padding: 0; background: white !important; } #a5-print-element { margin: 0 auto; }`;
   } else {
     pageStyle = `@page { margin: 0; }`;
   }
